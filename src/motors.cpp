@@ -10,11 +10,8 @@ Motors::Motors( int _pinIN1_R, int _pinIN1_L,
 }
 
 void Motors::config() {
-    ledcSetup(chn_R, freq, res);
-    ledcSetup(chn_L, freq, res);
-
-    ledcAttachPin(pinIN1_R, chn_R);
-    ledcAttachPin(pinIN1_L, chn_L);
+    ledcAttachChannel(pinIN1_R, freq, res, chn_R);
+    ledcAttachChannel(pinIN1_L, freq, res, chn_L);
 }
 
 void Motors::setRightSpeed(int velocity){

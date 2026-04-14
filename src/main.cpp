@@ -14,11 +14,20 @@
 #define SENSOR_QNT 8
 #define LEDON 19
 
+#define ENCODER_CHN_A_L 36
+#define ENCODER_CHN_B_L 39
+#define ENCODER_CHN_A_R 35
+#define ENCODER_CHN_B_R 34
+
 // PWM config
 #define IN1_R 32
 #define IN1_L 33
 #define CHN_R 0
 #define CHN_L 1
+
+// mode (0 (LOW)  - following line)
+//      (1 (HIGH) - calibration)
+#define MODE 13
 
 // ======================= PROTOTYPES ======================= 
 void calibrationRoutine();
@@ -49,6 +58,8 @@ void setup() {
   pinMode(LEDON, OUTPUT);
   digitalWrite(LEDON, HIGH);
 
+  pinMode(MODE, INPUT_PULLUP);
+
   // constant inicialization
   Kp = 0.04;
   Ki = 0.0;
@@ -65,15 +76,16 @@ void setup() {
 
   Serial.begin(115200);
   delay(100);
-
-  calibrationRoutine();
-
-  if (calibrationFlag = false){
-    return;
-  }
 }
 
 void loop() {
+
+  if(digitalRead(MODE) == HIGH){
+    calibrationRoutine();
+  }
+  else{
+    followingLine = true;
+  }
 
   // time difference calculation
   double now = millis();
@@ -103,14 +115,6 @@ void calibrationRoutine(){
     qtr.calibrate(); 
     delay(25); 
   }
-
-  for (uint16_t i = 0; i < 4; i++){
-    motors.setSpeeds(70,70);
-    motors.setSpeeds(-70, -70);
-  }
-
-  calibrationFlag = true;
-  followingLine = true;
 }
 
 int16_t pid(int16_t error){
