@@ -11,27 +11,26 @@
 
 #endif
 
-#define SENSOR_QNT 8
+// qtr sensor specs
+#define SENSOR_QNT 8  
 #define LEDON 19
 
+// encoder pins
 #define ENCODER_CHN_A_L 36
 #define ENCODER_CHN_B_L 39
 #define ENCODER_CHN_A_R 35
 #define ENCODER_CHN_B_R 34
 
 // PWM config
-#define IN1_R 32
+#define IN1_R 32 
 #define IN1_L 33
 #define CHN_R 0
 #define CHN_L 1
 
-// mode (0 (LOW)  - following line)
-//      (1 (HIGH) - calibration)
-#define MODE 13
-
 // ======================= PROTOTYPES ======================= 
 void calibrationRoutine();
 int16_t pid(int16_t error);
+void IRAM_ATTR readEncoder();
 
 // ========================================================== 
 
@@ -40,15 +39,17 @@ Motors motors(IN1_R, IN1_L, CHN_R, CHN_L, FREQ, RES);
 
 uint16_t sensorValues[SENSOR_QNT];
 bool calibrationFlag = false;
-int center = 2500;
+int center = 3500;
 
-bool followingLine = false;
+bool followingLine = true;
 bool slowMode = false; 
 
+volatile long encoderCount = 0;
+
 // PID
-double Kp = 0.04;
+double Kp = 0.5;
 double Ki = 0.0;
-double Kd = 1.02;
+double Kd = 0.0;
 double lastTime, dt;
 double previousError = 0;
 int16_t correction;
@@ -57,13 +58,6 @@ void setup() {
   motors.setSpeeds(0,0);
   pinMode(LEDON, OUTPUT);
   digitalWrite(LEDON, HIGH);
-
-  pinMode(MODE, INPUT_PULLUP);
-
-  // constant inicialization
-  Kp = 0.04;
-  Ki = 0.0;
-  Kd = 1.02;
 
   // time variables inicialization
   dt = 0;
@@ -75,24 +69,20 @@ void setup() {
   qtr.setEmitterPin(LEDON);
 
   Serial.begin(115200);
-  delay(100);
+
+  // waits for 500 ms, then call calibration
+  delay(500);
+  calibrationRoutine();
 }
 
 void loop() {
 
-  if(digitalRead(MODE) == HIGH){
-    calibrationRoutine();
-  }
-  else{
-    followingLine = true;
-  }
-
-  // time difference calculation
-  double now = millis();
+  // time difference (dt) calculation
+  double now = micros();
   dt = (now - lastTime)/1000.00;
   lastTime = now;
 
-  if (followingLine = true){
+  if (followingLine){
     uint16_t pos = qtr.readLineWhite(sensorValues);
 
     int16_t error = center - pos;
@@ -104,27 +94,35 @@ void loop() {
     vel_L = constrain(vel_L, 0, 255);
     motors.setSpeeds(vel_R, vel_L);
   }
-
-  if (calibrationFlag = false){
-    return;
-  }
 }
 
 void calibrationRoutine(){
-  for (uint16_t i = 0; i < 100; i++) { 
-    qtr.calibrate(); 
-    delay(25); 
+  for (uint16_t i = 0; i < 5; i++) { 
+    qtr.calibrate();
+    motors.setSpeeds(30,0);
+    delay(500);
+    motors.setSpeeds(30,0);
+    delay(500);
   }
+
 }
 
 int16_t pid(int16_t error){
-  int16_t output;
+  int16_t proportionalError = 0;
+  double integralError = 0;
+  double derivativeError = 0;
 
-  int16_t proportionalError = error;
-  double integralError =+ error * dt;
-  double derivativeError = (error - previousError) / dt;
+  proportionalError = error;
+  integralError += error * dt;
+  derivativeError = (error - previousError) / dt;
+
   previousError = error;
   int16_t output = (int16_t) (Kp * proportionalError) + (Ki * integralError) + (Kd * derivativeError);
 
   return output;
+}
+
+
+// ISR
+void IRAM_ATTR readEncoder(int encoder ){
 }
