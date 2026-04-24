@@ -15,11 +15,11 @@ void Motors::config() {
 }
 
 void Motors::setRightSpeed(int velocity){
-    ledcWrite(chn_R, velocity);
+    ledcWrite(pinIN1_R, velocity);
 }
 
 void Motors::setLeftSpeed(int velocity){
-    ledcWrite(chn_L, velocity);
+    ledcWrite(pinIN1_L, velocity);
 }
 
 void Motors::setSpeeds(int velocity_R, int velocity_L){

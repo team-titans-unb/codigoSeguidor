@@ -7,7 +7,7 @@
 
 #define FREQ 50000
 #define RES 8
-#define BASE_VEL 170
+#define BASE_VEL 120
 
 #endif
 
@@ -38,8 +38,7 @@ QTRSensors qtr;
 Motors motors(IN1_R, IN1_L, CHN_R, CHN_L, FREQ, RES);
 
 uint16_t sensorValues[SENSOR_QNT];
-bool calibrationFlag = false;
-int center = 3500;
+int center = 2500;
 
 bool followingLine = true;
 bool slowMode = false; 
@@ -73,6 +72,8 @@ void setup() {
   // waits for 500 ms, then call calibration
   delay(500);
   calibrationRoutine();
+
+  delay(500);
 }
 
 void loop() {
@@ -80,30 +81,32 @@ void loop() {
   // time difference (dt) calculation
   double now = micros();
   dt = (now - lastTime)/1000.00;
-  lastTime = now;
 
-  if (followingLine){
-    uint16_t pos = qtr.readLineWhite(sensorValues);
+  if (dt > 0) { // Only run if time has passed
+    lastTime = now;
 
-    int16_t error = center - pos;
-    correction = pid(error);
+    if (followingLine){
+      uint16_t pos = qtr.readLineWhite(sensorValues);
+      int16_t error = center - pos;
+      correction = pid(error);
 
-    int16_t vel_R = BASE_VEL + correction;
-    int16_t vel_L = BASE_VEL - correction;
-    vel_R = constrain(vel_R, 0, 255);
-    vel_L = constrain(vel_L, 0, 255);
-    motors.setSpeeds(vel_R, vel_L);
+      int16_t vel_R = BASE_VEL + correction;
+      int16_t vel_L = BASE_VEL - correction;
+      vel_R = constrain(vel_R, 0, 255);
+      vel_L = constrain(vel_L, 0, 255);
+      motors.setSpeeds(vel_R, vel_L);
+    }
   }
 }
 
 void calibrationRoutine(){
-  for (uint16_t i = 0; i < 5; i++) { 
+  // Swing robot to the right
+  motors.setSpeeds(100, 0);
+  
+  for (uint16_t i = 0; i < 100; i++) { 
     qtr.calibrate();
-    motors.setSpeeds(30,0);
-    delay(500);
-    motors.setSpeeds(30,0);
-    delay(500);
   }
+  motors.setSpeeds(0,0);
 
 }
 
