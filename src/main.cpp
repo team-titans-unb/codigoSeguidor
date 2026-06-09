@@ -7,7 +7,7 @@
 
 #define FREQ 50000
 #define RES 8
-#define BASE_VEL 120
+#define BASE_VEL 150
 
 #endif
 
@@ -38,7 +38,7 @@ QTRSensors qtr;
 Motors motors(IN1_R, IN1_L, CHN_R, CHN_L, FREQ, RES);
 
 uint16_t sensorValues[SENSOR_QNT];
-int center = 2500;
+int center = 3500;
 
 bool segueLinha = true;
 bool slowMode = false; 
@@ -46,9 +46,9 @@ bool slowMode = false;
 volatile long encoderCount = 0;
 
 // PID
-double Kp = 0.5;
+double Kp = 0.08;
 double Ki = 0.0;
-double Kd = 0.0;
+double Kd = 0.8;
 
 int erroAnterior = 0;
 long erroIntegral = 0;
@@ -67,34 +67,48 @@ void setup() {
 
   Serial.begin(115200);
 
-  // waits for 500 ms, then call calibration
-  delay(500);
+  // Blink LED while waiting, then stay ON when calibration starts
+  for (int i = 0; i < 6; i++) {
+    digitalWrite(LEDON, LOW);
+    delay(250);
+    digitalWrite(LEDON, HIGH);
+    delay(250);
+  }
   calibrationRoutine();
+
+  for (int i = 0; i < SENSOR_QNT; i++) {
+    Serial.print("S"); Serial.print(i);
+    Serial.print(" min:"); Serial.print(qtr.calibrationOn.minimum[i]);
+    Serial.print(" max:"); Serial.println(qtr.calibrationOn.maximum[i]);
+  }
 
   delay(500);
 }
 
 void loop() {
-	int pos = qtr.realdLineWhite(sensorValues);
-	int erro = pos - 3500;
+	int pos = qtr.readLineWhite(sensorValues);
+	int erro = pos - center;
 
 	int correcao = pid(erro);
 
-	int Lvel = BASE_VEL + correcao;
-	int Rvel = BASE_VEL - correcao;
+	int Lvel = BASE_VEL - correcao;
+	int Rvel = BASE_VEL + correcao;
 
 	Lvel = constrain(Lvel, 0, 255);
 	Rvel = constrain(Rvel, 0, 255);
 
 	motors.setSpeeds(Lvel, Rvel);
+
+  Serial.println(pos);
+  Serial.print(" | erro: "); Serial.print(erro);
+  Serial.print(" | cor: ");  Serial.println(correcao);
 }
 
 void calibrationRoutine(){
-	motors.setSpeeds(100, -100);
 	for (uint16_t i = 0; i < 80; i++){
 		qtr.calibrate();
+    delay(5);
 	}
-	motors.setSpeeds(0,0);
 }
 
 int16_t pid(int16_t error){
@@ -102,7 +116,7 @@ int16_t pid(int16_t error){
   erroIntegral += error;
   erroIntegral = constrain(erroIntegral, -10000, 10000);
   
-  erroDerivada = error - erroAnterior;
+  int erroDerivada = error - erroAnterior;
 
   int output = (int) (Kp * error) + (Ki * erroIntegral) + (Kd * erroDerivada);
   erroAnterior = error;
