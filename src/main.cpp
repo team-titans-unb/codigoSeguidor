@@ -86,7 +86,7 @@ void setup() {
 }
 
 void loop() {
-	int pos = qtr.readLineWhite(sensorValues);
+	int pos = qtr.readLineBlack(sensorValues);
 	int erro = pos - center;
 
 	int correcao = pid(erro);
